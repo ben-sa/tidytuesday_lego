@@ -28,7 +28,7 @@ parts_time <- data %>%
   labs(title = "Lego since the 1950's",
        subtitle = "Number of sets published increasing rapidly, while average parts per set growig moderately",
        y = "Number of sets / parts", x = "",
-       caption = "Source: rebrickable.com") +
+       caption = "Source: data provided by rebrickable.com") +
   scale_y_continuous(label = label_number()) +
   theme_solarized() + 
   theme(plot.title = element_text(size=17, face = "bold"),
@@ -41,3 +41,51 @@ parts_time <- data %>%
                                                  2010, 2020))
 
 parts_time
+
+# Analyze set names
+library(tidytext)
+
+data_tidy <- data %>%
+  select(set_num, year, name) %>% 
+  unnest_tokens(word, name) %>% 
+  anti_join(get_stopwords())
+
+# Show top words in graph
+data_tidy %>% 
+  filter(str_count(word) > 2,
+         word != "set", word != "pack",
+         word != "bricks", word != "lego",
+         word != "brick", word != "collection",
+         word != "basic", word != "box") %>%
+  tabyl(word) %>% arrange(desc(n)) %>%
+  head(25) %>% 
+  adorn_pct_formatting() %>% 
+  ggplot(aes(x = n, y = reorder(word, n), label = percent)) +
+  geom_bar(stat = "identity", fill = "cadetblue4") +
+  theme_solarized() +
+  theme(plot.title = element_text(size=17, face = "bold"),
+        plot.subtitle = element_text(size=10),
+       axis.ticks = element_blank(), axis.line = element_blank(),
+       legend.key = element_rect(fill = NA, color = NA),
+       legend.text = element_text(size = 12),
+       legend.title = element_blank()) +
+  scale_x_continuous(expand = c(0,0), label = label_number(),
+                     limits = c(0, 750)) +
+  labs(title = "Most frequently used words in LEGO set titles",
+       subtitle = "Most popular titles include Emergency Vehicles, Action figures and cities",
+       x = "Number of occurences (% of all words used)",
+       y = "",
+       caption = "Source: data provided by rebrickable.com") +
+  geom_text(hjust = 1.3, size = 3, color = "white")
+
+# Create Word cloud
+library(wordcloud)
+data_tidy %>% 
+  select(word) %>% 
+  count(word) %>%
+  mutate(stem = wordStem(word)) %>% 
+  filter(str_count(word) > 2,
+         word != "set", word != "pack",
+         word != "bricks", word != "lego",
+         word != "brick") %>%
+  with(wordcloud(stem, n, max.words = 150))
